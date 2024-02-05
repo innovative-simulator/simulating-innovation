@@ -1,5 +1,5 @@
 # Simulating Innovation
-Excel and NetLogo files to accompany the book "Simulating Innovation: Computer-based tools for rethinking innovation", Watts, C. &amp; N. Gilbert, 2014.
+Excel and NetLogo files to accompany the book "Simulating Innovation: Computer-based tools for rethinking innovation", Christopher Watts &amp; Nigel Gilbert, 2014.
 
 These files were originally published on the website for the associated academic research project, SIMIAN. We make them available here on github to ensure they remain publicly accessible. 
 
@@ -10,6 +10,14 @@ Github also provides a better means to alert users to any changes to the files. 
 One way to deal with this is to install version 5.3.1 of NetLogo (multiple versions of NetLogo can remain installed on the same computer simultaneously), but not every reader of the book will be able to do this - e.g. university computers often restrict what ordinary users can install on them. 
 
 Alternatively, new versions of our .nlogo files can be produced for later versions of NetLogo. Few of the changes are likely to be difficult, but readers might not wish to attempt them themselves. This github page offers a means of contacting the programs' author to alert him about these issues, and to request updated versions.
+
+## Installing from github
+
+If you have git installed on your computer already, the fastest way to obtain these files is to create a new directory, open git bash in that directory, and type:
+
+```git clone https://github.com/innovative-simulator/simulating-innovation```
+
+If unfamiliar with git, there are many introductions available on the web, and some of them actually easy to understand. git is a very powerful set of tools for sharing code and tracking its modifications, and well worth learning, even for only occasional programmers. But it comes with a steep learning curve.
 
 ## OUR TERMS AND CONDITIONS OF USE
 
