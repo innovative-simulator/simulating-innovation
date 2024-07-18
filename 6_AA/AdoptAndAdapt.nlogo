@@ -8,7 +8,7 @@ extensions [array matrix]
 globals [
   labels-on
   links-on
-  
+
   disjoined-techs
   techs-count
   number-of-terrains
@@ -42,10 +42,14 @@ globals [
   ;move-memory-length ; Used by one agent movement method
 ]
 
-breed [agents agent]
+
+
+breed [my-agents my-agent]
 undirected-link-breed [nlinks nlink] ; Neighbours close enough to imitate each other
 
-agents-own [
+
+
+my-agents-own [
   home-patch
   target-patch
   move-memory
@@ -62,34 +66,36 @@ patches-own [
 ]
 
 nlinks-own [
-  
+
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+
 to setup
   clear-all
   reset-ticks
-  
+
   set chartcolours array:from-list (list 3 15 27 33 45 57 63 75 87 93 105 117 123 135 0 8)
   set agentcolours array:from-list (list red orange lime sky violet pink brown cyan magenta grey )
-  
+
   setup-landscape
   setup-constraints ;Sets up constraints, using seed-fitness for RNG
-  
+
   set last-seed-sim (ifelse-value (seed-sim = 0) [new-seed] [seed-sim])
   random-seed last-seed-sim
-  
+
   setup-population
-  set init-num-satisfied (count agents with [fitness = total-constraints])
-  set init-mean-fitness (mean [fitness] of agents)
-  set init-max-fitness (max [fitness] of agents)
-  set init-min-fitness (min [fitness] of agents)
-  
+  set init-num-satisfied (count my-agents with [fitness = total-constraints])
+  set init-mean-fitness (mean [fitness] of my-agents)
+  set init-max-fitness (max [fitness] of my-agents)
+  set init-min-fitness (min [fitness] of my-agents)
+
   update-stats
   my-setup-plots
-  
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -98,12 +104,12 @@ end
 to setup-landscape
   if landscape-type = "World" [setup-landscape-world]
   if landscape-type = "4 Quarters" [setup-landscape-4Q]
-  
+
 end
 
 to setup-landscape-4Q
   set number-of-terrains 4
-  resize-world 0 32 0 32 
+  resize-world 0 32 0 32
   let grassland (patch-set
     patches with [pxcor < 16 and pycor > 16]
     patches with [pxcor = 16 and pycor > 16 and pycor mod 2 = 0]
@@ -113,27 +119,27 @@ to setup-landscape-4Q
     patches with [pxcor > 16 and pycor > 16]
     patches with [pxcor = 16 and pycor > 16 and pycor mod 2 = 1]
     )
-  let water (patch-set 
+  let water (patch-set
     patches with [pxcor > 16 and pycor < 16]
     patches with [pxcor = 16 and pycor < 16 and pycor mod 2 = 0]
     )
-  let sand (patch-set 
+  let sand (patch-set
     patches with [pxcor < 16 and pycor < 16]
     patches with [pxcor < 16 and pycor = 16 and pxcor mod 2 = 1]
     patches with [pxcor = 16 and pycor < 16]
     patches with [pxcor >= 16 and pycor = 16]
     )
-  
+
   ask grassland [
     set pcolor (green + (random 3) - 1)
     set terrain 3
   ]
-  
+
   ask woodland [
     set pcolor (63 + (random 3) - 1)
     set terrain 1
   ]
-  
+
   ask sand [
     set pcolor (yellow + (random 3) - 1)
     set terrain 2
@@ -142,13 +148,13 @@ to setup-landscape-4Q
     set pcolor blue
     set terrain 0
   ]
-  
+
 end
 
 to setup-landscape-world
   ; Grass 0; Forest 1; Desert 2; Grassland 3; Tropical jungle 4; Ice / Mountains 5
   set number-of-terrains 6
-  resize-world 0 31 0 31 
+  resize-world 0 31 0 31
   let pcolor-scheme array:from-list (list blue (green - 2) yellow (green + 1) (lime - 3) (white - 1))
   let wmatrix matrix:from-column-list [
     [ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ]
@@ -188,7 +194,7 @@ to setup-landscape-world
     set terrain matrix:get wmatrix pxcor (31 - pycor)
     set pcolor array:item pcolor-scheme terrain
   ]
-  
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -196,7 +202,7 @@ end
 
 to setup-population
   ;set move-memory-length 10
-  create-agents initial-population [
+  create-my-agents initial-population [
     setxy random-xcor random-ycor
     if landscape-type = "World" [
       while [[terrain = 0] of patch-here] [setxy random-xcor random-ycor] ; Don't base yourself on water.
@@ -208,18 +214,24 @@ to setup-population
     setup-initial-techs
     ;set label (word array:to-list techs)
     set cur-terrain [terrain] of patch-here
-    set fitness agent-fitness self
+    ;;set fitness agent-fitness self
     set target-patch patch-here
     set move-memory-pos 0
     set move-memory array:from-list n-values move-memory-length [[]]
   ]
+
+  ask my-agents [
+   ;; set up fitness after agents are set up, otherwise social fitness will not work.
+   set fitness agent-fitness self
+  ]
+
   set labels-on false
   toggle-labels
   setup-links
   toggle-links
-  
+
   set techs-count array:from-list (n-values number-of-techs [0])
-  ask agents [set techs-count array:from-list (map [?1 + ?2] (array:to-list techs-count) (array:to-list techs))]
+  ask my-agents [set techs-count array:from-list (map [[val1 val2 ] -> val1 + val2] (array:to-list techs-count) (array:to-list techs))]
 end
 
 to setup-initial-techs
@@ -237,7 +249,7 @@ end
 
 to toggle-labels
   set labels-on (not labels-on)
-  ask agents [
+  ask my-agents [
     ifelse labels-on [
       set label (word array:to-list techs)
     ]
@@ -257,10 +269,10 @@ to my-setup-plots
     set-plot-pen-color array:item chartcolours pen-num
     set-plot-pen-interval output-every-n-ticks
   ]
-  
+
   set-current-plot "Technologies' Popularity"
-  set-plot-x-range 0 number-of-techs 
-  
+  set-plot-x-range 0 number-of-techs
+
   set-current-plot "Number of Techs Per Agent"
   set-plot-y-range 0 (number-of-techs + 1)
   set-current-plot-pen "Mean"
@@ -281,13 +293,13 @@ to my-setup-plots
 
   set-current-plot "Fitness Distribution"
   set-plot-x-range 0 (total-constraints + 1)
-  
+
   set-current-plot "Number of Fully Satisfied Agents"
   set-plot-y-range 0 (initial-population + 1)
   set-plot-pen-interval output-every-n-ticks
-  
+
   my-update-plots
-  
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -296,43 +308,43 @@ end
 to setup-constraints
   ; Defines the constraint sets for each terrain type
   set total-constraints agent-type-constraints + terrain-constraints + social-constraints + generic-constraints
-  
+
   set last-seed-fitness (ifelse-value (seed-fitness = 0) [new-seed] [seed-fitness])
   random-seed last-seed-fitness
-  
+
   set aconstraints n-values number-of-agent-types [
     ; multiple agent types
     n-values agent-type-constraints [
         ; multiple constraints in each set
-        (map [((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [?])))
+        (map [? -> ((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [? -> ?])))
         ; multiple component variables in each constraint
         ; Each component is an index number to be used with the techs array
         ; To denote a negated variable, an index number is multiplied by -1
     ]
-  ]  
+  ]
 
   set tconstraints n-values number-of-terrains [
     ; multiple terrain types
     n-values terrain-constraints [
         ; multiple constraints in each set
-        (map [((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [?])))
+        (map [? -> ((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [? -> ?])))
         ; multiple component variables in each constraint
         ; Each component is an index number to be used with the techs array
         ; To denote a negated variable, an index number is multiplied by -1
     ]
-  ]  
+  ]
 
   set sconstraints n-values social-constraints [
       ; multiple constraints in 1 set
-      (map [((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [?])))
+      (map [? -> ((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [? -> ?])))
       ; multiple component variables in each constraint
       ; Each component is an index number to be used with the techs array
       ; To denote a negated variable, an index number is multiplied by -1
   ]
-  
+
   set gconstraints n-values generic-constraints [
     ; multiple constraints in 1 set
-    (map [((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [?])))
+    (map [? -> ((2 * random 2) - 1) * (1 + ?)] (n-of constraint-width-k (n-values number-of-techs [? -> ?])))
     ; multiple component variables in each constraint
     ; Each component is an index number to be used with the techs array
     ; To denote a negated variable, an index number is multiplied by -1
@@ -352,12 +364,34 @@ to-report ksat-fitness [given-agent]
   ; to return the number of constraints satisfied by those values.
   let ksat 0
   let cval 1
-  
-  ; Agent Type constraints 
-  foreach (item ([agent-type] of given-agent) aconstraints) [
+
+  ; Agent Type constraints
+  foreach (item ([agent-type] of given-agent) aconstraints)  [? ->
     ; i.e. for each constraint in the set that goes with current agent type
     set cval 1
-    foreach ? [
+    foreach ?  [x ->
+      ; i.e. for each variable in the constraint
+      ifelse x > 0 [
+        ; if variable ID positive, use value in agent's techs array
+        ; * means constraint is being calculated using conjunction operations (AND)
+;        set cval cval * (array:item techs (? - 1)) ; A AND B
+        set cval cval * (1 - array:item techs (x - 1)) ; A OR B equates to �(�A & �B)
+      ]
+      [
+        ; if variable ID negative, use 1 - value in agent's techs array
+;        set cval cval * (1 - (array:item techs ((abs ?) - 1))) ;A AND B
+        set cval cval * ((array:item techs ((abs x) - 1))) ; A OR B equates to �(�A & �B)
+      ]
+    ]
+;    set ksat ksat + cval ; A AND B
+    set ksat ksat + 1 - cval ; A OR B equates to �(�A & �B)
+  ]
+
+  ; Terrain constraints
+  foreach (item ([cur-terrain] of given-agent) tconstraints) [ x ->
+    ; i.e. for each constraint in the set that goes with current terrain
+    set cval 1
+    foreach x [ ? ->
       ; i.e. for each variable in the constraint
       ifelse ? > 0 [
         ; if variable ID positive, use value in agent's techs array
@@ -375,36 +409,14 @@ to-report ksat-fitness [given-agent]
     set ksat ksat + 1 - cval ; A OR B equates to �(�A & �B)
   ]
 
-  ; Terrain constraints 
-  foreach (item ([cur-terrain] of given-agent) tconstraints) [
-    ; i.e. for each constraint in the set that goes with current terrain
-    set cval 1
-    foreach ? [
-      ; i.e. for each variable in the constraint
-      ifelse ? > 0 [
-        ; if variable ID positive, use value in agent's techs array
-        ; * means constraint is being calculated using conjunction operations (AND)
-;        set cval cval * (array:item techs (? - 1)) ; A AND B
-        set cval cval * (1 - array:item techs (? - 1)) ; A OR B equates to �(�A & �B)
-      ]
-      [
-        ; if variable ID negative, use 1 - value in agent's techs array
-;        set cval cval * (1 - (array:item techs ((abs ?) - 1))) ;A AND B
-        set cval cval * ((array:item techs ((abs ?) - 1))) ; A OR B equates to �(�A & �B)
-      ]
-    ]
-;    set ksat ksat + cval ; A AND B
-    set ksat ksat + 1 - cval ; A OR B equates to �(�A & �B)
-  ]
-  
   ; Social constraints
   if 0 < length sconstraints [
-    set disjoined-techs array:from-list map [?] (array:to-list techs)
-    ask agents in-radius imitation-radius [set disjoined-techs array:from-list (map [ifelse-value (?1 = ?2) [?1] [?1 + ?2]] (array:to-list techs) (array:to-list disjoined-techs))]  
-    foreach sconstraints [
+    set disjoined-techs array:from-list map [? -> ?] (array:to-list techs)
+    ask my-agents in-radius imitation-radius [set disjoined-techs array:from-list (map [[x y] -> ifelse-value (x = y) [x] [x + y]] (array:to-list techs) (array:to-list disjoined-techs))]
+    foreach sconstraints [ x ->
       ; i.e. for each constraint in the set that goes with current terrain
       set cval 1
-      foreach ? [
+      foreach x [ ? ->
         ; i.e. for each variable in the constraint
         ifelse ? > 0 [
           ; if variable ID positive, use value in agent's techs array
@@ -422,12 +434,12 @@ to-report ksat-fitness [given-agent]
       set ksat ksat + 1 - cval ; A OR B equates to �(�A & �B)
     ]
   ]
-  
+
   ; Generic constraints
-  foreach gconstraints [
+  foreach gconstraints [ x ->
     ; i.e. for each constraint in the set that goes with current terrain
     set cval 1
-    foreach ? [
+    foreach x [ ? ->
       ; i.e. for each variable in the constraint
       ifelse ? > 0 [
         ; if variable ID positive, use value in agent's techs array
@@ -455,11 +467,11 @@ to output-constraints
 
   let cnum 0
   let tnum 0
-  foreach aconstraints [
+  foreach aconstraints  [ x ->
     ; i.e. for each constraint set
     print (word "Agent Type " tnum ":")
     set cnum 0
-    foreach ? [
+    foreach x [ ? ->
       output-current-constraint ? cnum
       set cnum (cnum + 1)
     ]
@@ -468,11 +480,11 @@ to output-constraints
   ]
 
   set tnum 0
-  foreach tconstraints [
+  foreach tconstraints [ x ->
     ; i.e. for each constraint set
     print (word "Terrain " tnum ":")
     set cnum 0
-    foreach ? [
+    foreach x [ ? ->
       output-current-constraint ? cnum
       set cnum (cnum + 1)
     ]
@@ -482,7 +494,7 @@ to output-constraints
 
   print (word "Social:")
   set cnum 0
-  foreach sconstraints [
+  foreach sconstraints [ ? ->
     output-current-constraint ? cnum
     set cnum (cnum + 1)
   ]
@@ -490,7 +502,7 @@ to output-constraints
 
   print (word "Generic:")
   set cnum 0
-  foreach gconstraints [
+  foreach gconstraints [ ? ->
     output-current-constraint ? cnum
     set cnum (cnum + 1)
   ]
@@ -503,7 +515,7 @@ to output-current-constraint [clist cnum]
   ; i.e. for each constraint in the set
   let vnum 0
   set constraint-string (word cnum ")")
-  foreach clist [
+  foreach clist [ ? ->
     ; i.e. for each variable in the constraint
 ;        if vnum > 0 [set constraint (word constraint " &")]
     if vnum > 0 [set constraint-string (word constraint-string " OR")]
@@ -521,12 +533,12 @@ to output-current-constraint [clist cnum]
 end
 
 to output-best-fitness
-  ; Creates a temporary agent, then uses it to 
+  ; Creates a temporary agent, then uses it to
   ; print best fitness and solution for each terrain
   let tnum 0
   print ""
   print "Outputting best fitness values and first optimal solution:"
-  create-agents 1 [
+  create-my-agents 1 [
     set techs array:from-list (n-values number-of-techs [0])
     repeat number-of-agent-types [
       set agent-type tnum
@@ -576,13 +588,13 @@ to-report best-fitness-agent [given-agent]
       set cur-sol (cur-sol + 1)
     ]
   ]
-  
+
   set pos 0
   repeat number-of-techs [
     array:set techs pos ((int (best-sol / (2 ^ pos))) mod 2)
     set pos (pos + 1)
   ]
-  
+
   report best-fitness
 end
 
@@ -607,7 +619,7 @@ to output-seeds
   print (word "seed-fitness " last-seed-fitness)
   print (word "seed-sim " last-seed-sim)
   print ""
-  
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -617,58 +629,58 @@ to go
   ; Agents move around
   ; and may invent, discard / forget, or imitate from nearby agents technologies.
   let temp-terrain 0
-  ask agents [
+  ask my-agents [
     agent-move
-    
+
     set temp-terrain [terrain] of patch-here
     if cur-terrain != temp-terrain [
       set cur-terrain temp-terrain
       set fitness agent-fitness self
       setup-agent-shape
     ]
-    
+
     if random-float 1 < chance-invention [invention]
     if random-float 1 < chance-discard [discard]
     if random-float 1 < chance-imitation [adopt-and-adapt]
-    
+
   ]
-  
+
   tick
-  
+
   if ticks mod output-every-n-ticks = 0 [
     if links-on [refresh-nlinks]
     update-stats
     my-update-plots
   ]
-  
+
 end
 
 to update-stats
-  set num-satisfied (count agents with [fitness = total-constraints])
-  ask agents [set cur-num-techs (sum array:to-list techs)]
-  set mean-num-techs (mean [cur-num-techs] of agents)
-  set max-num-techs (max [cur-num-techs] of agents)
-  set min-num-techs (min [cur-num-techs] of agents)
+  set num-satisfied (count my-agents with [fitness = total-constraints])
+  ask my-agents [set cur-num-techs (sum array:to-list techs)]
+  set mean-num-techs (mean [cur-num-techs] of my-agents)
+  set max-num-techs (max [cur-num-techs] of my-agents)
+  set min-num-techs (min [cur-num-techs] of my-agents)
   set mean-num-adopters (mean array:to-list techs-count)
   set max-num-adopters (max array:to-list techs-count)
   set min-num-adopters (min array:to-list techs-count)
-  set mean-fitness (mean [fitness] of agents)
-  set max-fitness (max [fitness] of agents)
-  set min-fitness (min [fitness] of agents)
+  set mean-fitness (mean [fitness] of my-agents)
+  set max-fitness (max [fitness] of my-agents)
+  set min-fitness (min [fitness] of my-agents)
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to agent-move
-  
+
   if agent-movement-method = "Static" [ stop ]
   if agent-movement-method = "Around base" [ agent-move-aroundbase stop ]
   if agent-movement-method = "Star base" [ agent-move-starbase stop ]
   if agent-movement-method = "Random walk" [ agent-move-randomwalk stop ]
   if agent-movement-method = "Mostly memory" [ agent-move-mostlymemory stop ]
   if agent-movement-method = "Mostly good memory" [ agent-move-mostlygoodmemory stop ]
-  
+
 end
 
 to agent-move-randomwalk
@@ -746,9 +758,9 @@ to agent-move-mostlygoodmemory
   ifelse (patch-here = target-patch) [
     ; At target. Try going somewhere else.
     set-new-target
-    set move-memory-pos length filter [ifelse-value (? = []) [false] [fitness <= last ?]] array:to-list move-memory
+    set move-memory-pos length filter [ ? -> ifelse-value (? = []) [false] [fitness <= last ?]] array:to-list move-memory
     if (0 < move-memory-pos) [
-      set move-memory-pos position (one-of filter [fitness <= last ?] array:to-list move-memory) move-memory
+      set move-memory-pos position (one-of filter [? -> fitness <= last ?] array:to-list move-memory) move-memory
       array:set move-memory move-memory-pos  (list patch-here fitness)
     ]
     fd 1
@@ -788,7 +800,7 @@ to innovate-new-target
   rt random-float 360
   while [nobody = patch-ahead step-size] [rt random-float 360]
   set target-patch patch-ahead step-size
-end  
+end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -813,14 +825,14 @@ to invention
     [
       set techs array:from-list old-values
     ]
-    
+
   ]
 end
 
 to flash-invention
   ; Initiates an invention event
   ; Called by button
-  ask one-of agents [invention]
+  ask one-of my-agents [invention]
 end
 
 to discard
@@ -843,7 +855,7 @@ to discard
     [
       set techs array:from-list old-values
     ]
-    
+
   ]
 end
 
@@ -857,7 +869,7 @@ to-report techs-present [start-bit num-bits]
   ]
   report bit-count
 end
-  
+
 
 to invent-techs [start-bit num-bits]
   let pos start-bit
@@ -878,8 +890,8 @@ end
 to adopt-and-adapt
   ; Current agent imitates one of the agents within a given radius of it.
   ; A multi-bit word may be copied - with possibility of adaptation or error
-  let imitated one-of agents in-radius imitation-radius
-  if imitated != nobody [    
+  let imitated one-of my-agents in-radius imitation-radius
+  if imitated != nobody [
     let selected-tech ((random (number-of-techs / size-of-complex-techs)) * size-of-complex-techs)
     if (compare-bits self imitated selected-tech size-of-complex-techs) < size-of-complex-techs [
       let old-values array:to-list techs
@@ -900,7 +912,7 @@ to adopt-and-adapt
         set techs array:from-list old-values
       ]
     ]
-  ]  
+  ]
 end
 
 to-report compare-bits [ego alter start-bit num-bits]
@@ -928,8 +940,8 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to setup-links
-  ask agents [
-    ask other agents [
+  ask my-agents [
+    ask other my-agents [
       create-nlink-with myself [
         set hidden? true
         set color white
@@ -937,7 +949,7 @@ to setup-links
     ]
   ]
   set links-on true
-end  
+end
 
 to toggle-links
   ; Switch on/off links showing who can interact with whom.
@@ -959,7 +971,7 @@ to refresh-nlinks
       set hidden? true
     ]
   ]
-  
+
 ;  ask agents [
 ;    ask other agents in-radius imitation-radius [
 ;      ifelse nlink-neighbor? myself [
@@ -983,15 +995,15 @@ to my-update-plots
     plotxy ticks (array:item techs-count pen-num)
     set pen-num (pen-num + 1)
   ]
-  
+
   set-current-plot "Technologies' Popularity"
   clear-plot
   set pen-num 0
   repeat number-of-techs [
     plot (array:item techs-count pen-num)
     set pen-num (pen-num + 1)
-  ]  
-  
+  ]
+
   set-current-plot "Number of Techs Per Agent"
   set-current-plot-pen "Mean"
   plotxy ticks mean-num-techs
@@ -1007,13 +1019,13 @@ to my-update-plots
   plotxy ticks max-fitness
   set-current-plot-pen "Min"
   plotxy ticks min-fitness
-  
+
   set-current-plot "Fitness Distribution"
-  histogram [fitness] of agents
-  
+  histogram [fitness] of my-agents
+
   set-current-plot "Number of Fully Satisfied Agents"
   plotxy ticks num-satisfied
-  
+
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1022,8 +1034,8 @@ end
 GRAPHICS-WINDOW
 254
 10
-693
-470
+691
+448
 -1
 -1
 13.0
@@ -1069,7 +1081,7 @@ INPUTBOX
 248
 245
 Roam-Radius
-2
+2.0
 1
 0
 Number
@@ -1097,7 +1109,7 @@ INPUTBOX
 111
 310
 Initial-Population
-60
+60.0
 1
 0
 Number
@@ -1118,7 +1130,7 @@ INPUTBOX
 111
 371
 Number-Of-Techs
-4
+4.0
 1
 0
 Number
@@ -1232,7 +1244,7 @@ INPUTBOX
 521
 685
 Imitation-Radius
-2
+2.0
 1
 0
 Number
@@ -1263,7 +1275,7 @@ INPUTBOX
 229
 674
 Constraint-Width-K
-2
+2.0
 1
 0
 Number
@@ -1292,7 +1304,7 @@ INPUTBOX
 690
 826
 Output-Every-n-Ticks
-400
+400.0
 1
 0
 Number
@@ -1303,7 +1315,7 @@ INPUTBOX
 164
 892
 Seed-Fitness
-0
+0.0
 1
 0
 Number
@@ -1314,7 +1326,7 @@ INPUTBOX
 164
 954
 Seed-Sim
-0
+0.0
 1
 0
 Number
@@ -1409,7 +1421,7 @@ INPUTBOX
 249
 371
 Size-Of-Complex-Techs
-1
+1.0
 1
 0
 Number
@@ -1420,7 +1432,7 @@ INPUTBOX
 526
 750
 Chance-Adapt
-0
+0.0
 1
 0
 Number
@@ -1619,7 +1631,7 @@ CHOOSER
 Agent-Movement-Method
 Agent-Movement-Method
 "Static" "Random walk" "Star base" "Around base" "Mostly memory" "Mostly good memory"
-4
+3
 
 BUTTON
 386
@@ -1657,7 +1669,7 @@ Terrain-Constraints
 Terrain-Constraints
 0
 128
-16
+16.0
 4
 1
 NIL
@@ -1672,7 +1684,7 @@ Social-Constraints
 Social-Constraints
 0
 128
-8
+0.0
 4
 1
 NIL
@@ -1687,7 +1699,7 @@ Generic-Constraints
 Generic-Constraints
 0
 128
-8
+0.0
 4
 1
 NIL
@@ -1710,7 +1722,7 @@ INPUTBOX
 248
 309
 Number-Of-Agent-Types
-1
+1.0
 1
 0
 Number
@@ -1724,7 +1736,7 @@ Agent-Type-Constraints
 Agent-Type-Constraints
 0
 128
-8
+0.0
 4
 1
 NIL
@@ -1796,7 +1808,7 @@ INPUTBOX
 129
 434
 Move-Memory-Length
-10
+10.0
 1
 0
 Number
@@ -1816,6 +1828,8 @@ Number
 # ADOPT AND ADAPT
 
 ## WHAT IS IT?
+
+MODIFIED 7/17/2024 RJL to (sortof) work on Netlogo 6.4
 
 A model of multiple technology diffusion in which there are constraints on which technologies will work well with which others. Constraints may be due to the terrain in the landscape, the agents in one's neighbourhood, one's own attributes or due to some general physical properties of the technology itself.
 
@@ -2259,9 +2273,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.2.0
+NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -2385,9 +2398,9 @@ flash-invention</setup>
       <value value="1.0E-4"/>
       <value value="2.0E-4"/>
       <value value="5.0E-4"/>
-      <value value="0.0010"/>
-      <value value="0.0020"/>
-      <value value="0.0050"/>
+      <value value="0.001"/>
+      <value value="0.002"/>
+      <value value="0.005"/>
       <value value="0.01"/>
       <value value="0.02"/>
       <value value="0.05"/>
@@ -2462,7 +2475,7 @@ flash-invention</setup>
     <enumeratedValueSet variable="chance-adapt">
       <value value="0"/>
       <value value="1.0E-4"/>
-      <value value="0.0010"/>
+      <value value="0.001"/>
       <value value="0.01"/>
       <value value="0.1"/>
       <value value="1"/>
@@ -2561,7 +2574,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
